@@ -1,10 +1,13 @@
 package com.mildlyskilled.messages
 
 import akka.actor.ActorRef
-import com.mildlyskilled.models.{Comeback, Insult}
+import com.mildlyskilled.models.Entry
 
 sealed trait Message
-case class InsultMessage(target: ActorRef, insult: Insult) extends Message
-case class ComebackMessage(target: ActorRef, comeback: Comeback) extends Message
+case class InsultMessage(insult: Entry) extends Message
+case class ComebackMessage(comeback: Entry) extends Message
+case class KnownInsults(insults: List[Entry]) extends Message
+case class SelectInsult(id: Int) extends Message
+case object GetInsults extends Message
 case object Initialise
 case object Leave

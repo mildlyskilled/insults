@@ -1,16 +1,8 @@
 package com.mildlyskilled.actors
 
-import akka.actor.{ActorLogging, Actor}
-import com.mildlyskilled.models.{Comeback, Insult}
+import akka.actor.ActorLogging
+import com.mildlyskilled.models.Entry
 
-class Pirate extends Actor with ActorLogging {
-  val knownInsults: List[Insult] = ???
-  val knowComebacks: List[Comeback] = ???
-
-  def receive = {
-    case Insult(id, message) =>
-      log.info(message)
-    // send comeback using ID
-  }
+class Pirate(val insults:List[Entry], var current:Option[Entry]) extends Player(insults, current) with ActorLogging {
 
 }
