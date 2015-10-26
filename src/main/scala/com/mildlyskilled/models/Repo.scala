@@ -16,4 +16,6 @@ class Repo {
     val rawInsults = Source.fromURI(getClass.getResource("/insults.json").toURI).mkString
     Json.parse(rawInsults).as[List[Entry]]
   }
+
+  def getRandomInsults(count: Int):List[Entry] = scala.util.Random.shuffle(entries).take(count)
 }
