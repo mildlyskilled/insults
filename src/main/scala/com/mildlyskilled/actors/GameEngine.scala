@@ -1,6 +1,6 @@
 package com.mildlyskilled.actors
 
-import akka.actor.{ActorRef, Actor, ActorLogging, Props}
+import akka.actor._
 import com.mildlyskilled.messages.Protocol._
 import com.mildlyskilled.models.{Repo}
 
@@ -8,40 +8,70 @@ import scala.collection.mutable
 
 class GameEngine(val repo: Repo) extends Actor with ActorLogging {
 
-  def spawnPirate: ActorRef = context.actorOf(Props(classOf[Pirate], repo.getRandomInsults(2)), name="pirate")
-  var pirateActor: ActorRef = spawnPirate
-  val scores:mutable.Map[ActorRef, Int] = mutable.Map(pirateActor -> 2)
+  var registry = mutable.Map.empty[ActorRef, Int]
+
 
   def receive = {
-    case Initialise => {
-      log.info("Starting game engine")
-      log.info(s"Pirate Ready: ${pirateActor.path.name}")
+    case Initialise => log.info(s"Starting game engine ${self.path.name}")
+
+    case Register(player) => {
+      log.info(s"${player.path.name} has entered the game")
+      registry += (player -> 2)
     }
-    case AnotherGame => {
-      pirateActor = spawnPirate
+
+    case Unregister(player) => {
+      registry -= player
+      player ! GoAway
     }
+
     case InsultMessage(entry) => {
-      log.info("Forwarding insult")
-       pirateActor.tell(InsultMessage(entry), self)
+      if (registry.size < 2) {
+        log.info("We don't have all players required to play did you remember to type 's' to start?")
+      } else {
+        registry.keys.filterNot(_ == sender).head.tell(InsultMessage(entry), self)
+      }
+
     }
+
+    case ComebackMessage(entry) => {
+      if (registry.size < 2) {
+        log.info("We don't have all players required to play did you remember to type 's' to start?")
+      } else {
+        registry.keys.filterNot(_ == sender).head.tell(ComebackMessage(entry), self)
+      }
+    }
+
+    case SelectInsult(id) => {
+      sender() ! SelectInsult(id)
+    }
+
+    case ListPlayers => {
+      println("Current players in this game")
+      registry.foreach { p => println(p._1) }
+    }
+
     case ConcedeRound => {
       log.info(s"${sender.path.name} concedes this round")
+      registry(sender) = registry(sender) - 1
 
-      if (scores contains sender) {
-        if (scores(sender) == 0)
-          sender ! ConcedeGame
-        scores(sender) = scores(sender) - 1
-      }else{
-        scores + (sender -> 1)
+      if (registry(sender) == 0) {
+        sender ! ConcedeGame
+        registry -= sender
+        log.info(s"${sender.path.name} leaves")
       }
 
-      println(scores)
     }
+
     case KnownInsults(insults) => {
+      log.format("%logger : %msg%n")
       println(s"---------- Known Insults from ${sender.path.name}")
       insults.foreach { i =>
-        println(s"[${i.id}]: ${i.generalInsult}")
+        println(s"[${i.id}]: ${i.content}")
       }
+    }
+
+    case GetScores => {
+      registry.foreach { p => println(s"${p._1}: ${p._2}") }
     }
   }
 }
