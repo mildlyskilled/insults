@@ -25,7 +25,7 @@ class Repo {
   }
 
   def getRandomComebacks(count: Int):List[Comeback] = scala.util.Random.shuffle(entries).take(count).map{ e =>
-    Comeback(e.id, e.generalInsult)
+    Comeback(e.id, e.comeback)
   }
 
 }

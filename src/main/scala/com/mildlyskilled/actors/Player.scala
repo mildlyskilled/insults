@@ -1,7 +1,7 @@
 package com.mildlyskilled.actors
 
 import akka.actor.{Actor, ActorLogging}
-import com.mildlyskilled.messages.Protocol.{KnownInsults, ConcedeRound, ComebackMessage, InsultMessage}
+import com.mildlyskilled.messages.Protocol._
 import com.mildlyskilled.messages._
 import com.mildlyskilled.models.{Insult, Comeback, Entry}
 import scala.collection.mutable
@@ -14,8 +14,7 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
   var learnedInsults = mutable.Set.empty[Insult]
 
   override def handleInsult(i: Insult) = {
-    log.info(s"${self.path.name} received insult ${i.id} from ${sender.path.name}")
-
+    log.info(Console.BLUE + s"${i.content}" + Console.RESET)
     if ((knownInsults:::learnedInsults.toList).takeWhile(_.id == i.id).isEmpty) {
       learnedInsults += i
       sender() ! ConcedeRound
@@ -25,13 +24,17 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
   }
 
   override def handleComeback(c: Comeback) = {
-    log.info(s"${self.path.name} received comeback ${c.id}")
+    log.info(Console.GREEN + s"${c.content}" + Console.RESET)
     learnedComebacks += c
     sender() ! ConcedeRound
   }
 
   override def handleReturnInsults() = {
     sender() ! KnownInsults(knownInsults ::: learnedInsults.toList)
+  }
+
+  override def handleReturnComebacks() = {
+    sender() ! KnownComebacks(knownComebacks:::learnedComebacks.toList)
   }
 
   override def handleSelectInsult(id: Int) = {

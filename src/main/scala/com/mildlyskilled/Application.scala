@@ -17,18 +17,18 @@ object Application extends App {
 
   val system = ActorSystem("InsultSystem")
   val gameEngine = system.actorOf(Props(classOf[GameEngine], repo), name = "insult-sword-fighting")
-  val same = repo.getRandomInsults(2)
-  def spawnPirate: ActorRef = system.actorOf(Props(classOf[Pirate], same, repo.getRandomComebacks(2)),
-    name="pirate")
 
-  val playerActor = system.actorOf(Props(classOf[Player], same, repo.getRandomComebacks(2)),
+  def spawnPirate: ActorRef = system.actorOf(Props(classOf[Pirate], repo.getRandomInsults(2), repo.getRandomComebacks(2)),
+    name = "pirate")
+
+  val playerActor = system.actorOf(Props(classOf[Player], repo.getRandomInsults(2), repo.getRandomComebacks(2)),
     name = "player")
 
   var pirateActor: ActorRef = spawnPirate
 
   var started = false
 
-  def printHelp():Unit = {
+  def printHelp(): Unit = {
     println("Welcome Instructions are as follows (type)")
     println("-----------------------------------------")
     println("start - Start game")
@@ -36,7 +36,7 @@ object Application extends App {
     println("players - Get list of players")
     println("stop - dispenses with the current pirate pirate")
     println("another - Get another pirate to duel with")
-    println("pirate-insults - Get a list of insults known by the pirate")
+    println("pirate - Get a list of insults known by the pirate")
     println("Scores - Get a list of insults known by the pirate")
     println("i <insult-id> - Insult your opponent")
     println("c <comeback-id> - Reply with a witty comeback")
@@ -52,7 +52,7 @@ object Application extends App {
         gameEngine ! Register(playerActor)
         gameEngine ! Register(pirateActor)
         started = true
-      }else{
+      } else {
         println("Game already started please use restart instead")
       }
     }
@@ -60,9 +60,13 @@ object Application extends App {
     case "another" => {
       pirateActor = spawnPirate
       gameEngine ! Register(pirateActor)
+      gameEngine ! ResetPlayerScore(playerActor)
     }
 
-    case "play" => playerActor.tell(GetInsults, gameEngine)
+    case "player" => {
+      playerActor.tell(GetInsults, gameEngine)
+      playerActor.tell(GetComebacks, gameEngine)
+    }
 
     case "players" => gameEngine ! ListPlayers
 
@@ -70,8 +74,9 @@ object Application extends App {
       gameEngine ! Unregister(pirateActor)
     }
 
-    case "pirate-insults" => {
+    case "pirate" => {
       pirateActor.tell(GetInsults, gameEngine)
+      pirateActor.tell(GetComebacks, gameEngine)
     }
 
     case "scores" => gameEngine ! GetScores

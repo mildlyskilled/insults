@@ -51,7 +51,7 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
     }
 
     case ConcedeRound => {
-      log.info(s"${sender.path.name} concedes this round")
+      log.info(Console.RED + s"${sender.path.name} concedes this round" + Console.RESET)
       registry(sender) = registry(sender) - 1
 
       if (registry(sender) == 0) {
@@ -63,15 +63,25 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
     }
 
     case KnownInsults(insults) => {
-      log.format("%logger : %msg%n")
       println(s"---------- Known Insults from ${sender.path.name}")
       insults.foreach { i =>
         println(s"[${i.id}]: ${i.content}")
       }
     }
 
+    case KnownComebacks(comebacks) => {
+      println(s"---------- Known Comebacks from ${sender.path.name}")
+      comebacks.foreach { i =>
+        println(s"[${i.id}]: ${i.content}")
+      }
+    }
+
     case GetScores => {
-      registry.foreach { p => println(s"${p._1}: ${p._2}") }
+      registry.foreach { p => println(s"${p._1.path.name}: ${p._2}") }
+    }
+
+    case ResetPlayerScore(p) => {
+      registry(p) = 2
     }
   }
 }

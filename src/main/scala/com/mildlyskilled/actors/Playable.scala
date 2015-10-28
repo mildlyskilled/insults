@@ -19,6 +19,8 @@ trait Playable extends Actor with ActorLogging {
 
     case GetInsults => handleReturnInsults()
 
+    case GetComebacks => handleReturnComebacks()
+
     case SelectInsult(id) => handleSelectInsult(id)
 
     case ConcedeGame => handleConcedeGame()
@@ -29,17 +31,21 @@ trait Playable extends Actor with ActorLogging {
   }
 
   def handleInsult(i: Insult) = {
-    log.info(s"${self.path.name} received insult ${i.id} from ${sender.path.name}")
-    knownInsults foreach println
-    if (knownComebacks.takeWhile(_.id == i.id).isEmpty) {
+    log.info(Console.BLUE + s"${i.content}" + Console.RESET)
+
+    val found = for {
+      c <- knownComebacks if c.id == i.id
+    } yield c
+
+    if (found.isEmpty) {
       sender() ! ConcedeRound
     } else {
-      sender() ! ComebackMessage(knownComebacks.takeWhile(_.id == i.id).head)
+      sender() ! ComebackMessage(found.head)
     }
   }
 
   def handleComeback(c: Comeback) = {
-    log.info(s"${self.path.name} received comeback ${c.id}")
+    log.info(Console.GREEN + s"${c.content}" + Console.RESET)
     sender() ! ConcedeRound
   }
 
@@ -48,17 +54,26 @@ trait Playable extends Actor with ActorLogging {
   }
 
   def handleSelectInsult(id: Int) = {
-    sender() ! InsultMessage(knownInsults.filter(_.id == id).head)
+    val insultList = knownInsults.filter(_.id == id)
+    if (insultList.isEmpty){
+      log.info(Console.RED + "You do not know this insult yet" + Console.RESET)
+    }else{
+      sender() ! InsultMessage(insultList.head)
+    }
   }
 
   def handleGoAway() = {
-    log.info("Received go way message")
+    log.info(Console.RED + s"${self.path.name} leaving now" + Console.RESET)
     context stop self
   }
 
   def handleConcedeGame() = {
-    log.info(s"I have lost ${self.path.name} concedes")
+    log.info(Console.RED + s"I have lost ${self.path.name} concedes" + Console.RESET)
     context stop self
+  }
+
+  def handleReturnComebacks() = {
+    sender() ! KnownComebacks(knownComebacks)
   }
 
 }
