@@ -13,6 +13,8 @@ trait Playable extends Actor with ActorLogging {
   val knownComebacks: List[Comeback]
 
   def receive = {
+    case Info(msg) => log.info(Console.YELLOW + msg + Console.RESET)
+
     case InsultMessage(insult) => handleInsult(insult)
 
     case ComebackMessage(comeback) => handleComeback(comeback)
@@ -28,6 +30,8 @@ trait Playable extends Actor with ActorLogging {
     case GoAway => handleGoAway()
 
     case Leave => context.system.shutdown()
+
+    case Registered => handleRegisteredMessage()
   }
 
   def handleInsult(i: Insult) = {
@@ -74,6 +78,10 @@ trait Playable extends Actor with ActorLogging {
 
   def handleReturnComebacks() = {
     sender() ! KnownComebacks(knownComebacks)
+  }
+
+  def handleRegisteredMessage() = {
+    sender() ! WaitingForEngagement
   }
 
 }

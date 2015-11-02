@@ -5,6 +5,7 @@ import com.mildlyskilled.models.{Comeback, Insult, Entry}
 
 object Protocol {
   sealed trait Message
+  case class Info(msg: String) extends Message
   case class InsultMessage(insult: Insult) extends Message
   case class ComebackMessage(comeback: Comeback) extends Message
   case class KnownInsults(insults: List[Insult]) extends Message
@@ -13,7 +14,11 @@ object Protocol {
   case class Register(player: ActorRef) extends Message
   case class Unregister(player: ActorRef) extends Message
   case class ResetPlayerScore(player: ActorRef) extends Message
+  case object Registered extends Message
   case object GoAway extends Message
+  case object MyTurnForInsult extends Message
+  case object MyTurnForComeback extends Message
+  case object WaitingForEngagement extends Message
   case object GetInsults extends Message
   case object GetComebacks extends Message
   case object ConcedeRound extends Message

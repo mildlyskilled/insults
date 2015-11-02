@@ -9,6 +9,8 @@ import scala.collection.mutable
 class GameEngine(val repo: Repo) extends Actor with ActorLogging {
 
   var registry = mutable.Map.empty[ActorRef, Int]
+  var toComeback:ActorRef = _
+  var toInsult:ActorRef = _
 
 
   def receive = {
@@ -28,7 +30,11 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
       if (registry.size < 2) {
         log.info("We don't have all players required to play did you remember to type 's' to start?")
       } else {
-        registry.keys.filterNot(_ == sender).head.tell(InsultMessage(entry), self)
+        if (toInsult == sender()){
+          registry.keys.filterNot(_ == sender).head.tell(InsultMessage(entry), self)
+        }else{
+          sender() ! Info("It's not your turn to insult")
+        }
       }
 
     }
@@ -37,7 +43,11 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
       if (registry.size < 2) {
         log.info("We don't have all players required to play did you remember to type 's' to start?")
       } else {
-        registry.keys.filterNot(_ == sender).head.tell(ComebackMessage(entry), self)
+        if (toComeback == sender()) {
+          registry.keys.filterNot(_ == sender).head.tell(ComebackMessage(entry), self)
+        } else {
+          sender() ! Info("It's not your turn to comeback")
+        }
       }
     }
 
@@ -83,5 +93,9 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
     case ResetPlayerScore(p) => {
       registry(p) = 2
     }
+
+    case MyTurnForComeback => toComeback = sender()
+
+    case MyTurnForInsult => toInsult = sender()
   }
 }
