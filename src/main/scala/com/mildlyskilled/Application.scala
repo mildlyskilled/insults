@@ -85,6 +85,8 @@ object Application extends App {
       playerActor.tell(SelectInsult(id.toInt), gameEngine)
     }
 
+    case "turn" => gameEngine ! Turn
+
     case "help" => printHelp()
 
     case _ => println("I did not understand that message")

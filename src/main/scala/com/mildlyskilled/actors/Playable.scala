@@ -81,7 +81,7 @@ trait Playable extends Actor with ActorLogging {
   }
 
   def handleRegisteredMessage() = {
-    sender() ! WaitingForEngagement
+    sender() ! ReadyToEngage
   }
 
 }

@@ -19,7 +19,7 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
       learnedInsults += i
       sender() ! ConcedeRound
     } else {
-      sender() ! MyTurnForComeback
+      sender() ! WaitingForEngagement
       handleReturnComebacks()
     }
   }
@@ -42,7 +42,4 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
     sender() ! InsultMessage((knownInsults:::learnedInsults.toList).filter(_.id == id).head)
   }
 
-  override def handleRegisteredMessage() = {
-    sender() ! MyTurnForInsult
-  }
 }

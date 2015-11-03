@@ -19,6 +19,7 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
     case Register(player) => {
       log.info(s"${player.path.name} has entered the game")
       registry += (player -> 2)
+      player ! Registered
     }
 
     case Unregister(player) => {
@@ -94,8 +95,13 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
       registry(p) = 2
     }
 
-    case MyTurnForComeback => toComeback = sender()
+    case WaitingForEngagement => toComeback = sender()
 
-    case MyTurnForInsult => toInsult = sender()
+    case ReadyToEngage => toInsult = sender()
+
+    case Turn => {
+      log.info(Console.GREEN + toInsult.path.name + " to insult " + Console.RESET)
+      log.info(Console.GREEN + toComeback.path.name + " to comeback " + Console.RESET)
+    }
   }
 }
