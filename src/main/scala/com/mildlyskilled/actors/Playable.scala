@@ -2,15 +2,14 @@ package com.mildlyskilled.actors
 
 import akka.actor.{ActorLogging, Actor}
 import com.mildlyskilled.messages.Protocol._
-import com.mildlyskilled.models.{Comeback, Insult, Entry}
-
-import scala.collection.mutable
+import com.mildlyskilled.models.{Comeback, Insult}
 
 
 trait Playable extends Actor with ActorLogging {
 
   val knownInsults: List[Insult]
   val knownComebacks: List[Comeback]
+  implicit val insults = knownInsults
 
   def receive = {
     case Info(msg) => log.info(Console.YELLOW + msg + Console.RESET)
@@ -34,17 +33,11 @@ trait Playable extends Actor with ActorLogging {
     case Registered => handleRegisteredMessage()
   }
 
-  def handleInsult(i: Insult) = {
-    log.info(Console.BLUE + s"${i.content}" + Console.RESET)
-
-    val found = for {
-      c <- knownComebacks if c.id == i.id
-    } yield c
-
-    if (found.isEmpty) {
-      sender() ! ConcedeRound
-    } else {
-      sender() ! ComebackMessage(found.head)
+  def handleInsult(i: Insult) (implicit comebacks: List[Comeback]) = {
+    log.info(Console.GREEN + s"${i.content}" + Console.RESET)
+    comebacks find (_.id == i.id) match {
+      case None => sender() ! ConcedeRound
+      case Some(c) => sender() ! ComebackMessage(c)
     }
   }
 
@@ -57,12 +50,11 @@ trait Playable extends Actor with ActorLogging {
     sender() ! KnownInsults(knownInsults)
   }
 
-  def handleSelectInsult(id: Int) = {
-    val insultList = knownInsults.filter(_.id == id)
-    if (insultList.isEmpty){
-      log.info(Console.RED + "You do not know this insult yet" + Console.RESET)
-    }else{
-      sender() ! InsultMessage(insultList.head)
+  def handleSelectInsult(id: Int)(implicit insults: List[Insult]) = {
+    println(insults)
+    insults find { i => i.id == id } match {
+      case None => log.info(Console.RED + "You don't know this insult" + Console.RESET)
+      case Some(i) => sender() ! InsultMessage(i)
     }
   }
 

@@ -27,12 +27,12 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
       player ! GoAway
     }
 
-    case InsultMessage(entry) => {
+    case InsultMessage(insult) => {
       if (registry.size < 2) {
         log.info("We don't have all players required to play did you remember to type 's' to start?")
       } else {
         if (toInsult == sender()){
-          registry.keys.filterNot(_ == sender).head.tell(InsultMessage(entry), self)
+          registry.keys.filterNot(_ == sender).head.tell(InsultMessage(insult), self)
         }else{
           sender() ! Info("It's not your turn to insult")
         }
@@ -62,26 +62,26 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
     }
 
     case ConcedeRound => {
-      log.info(Console.RED + s"${sender.path.name} concedes this round" + Console.RESET)
-      registry(sender) = registry(sender) - 1
+      log.info(Console.RED + s"${sender().path.name} concedes this round" + Console.RESET)
+      registry(sender()) = registry(sender()) - 1
 
-      if (registry(sender) == 0) {
+      if (registry(sender()) == 0) {
         sender ! ConcedeGame
         registry -= sender
-        log.info(s"${sender.path.name} leaves")
+        log.info(s"${sender().path.name} leaves")
       }
 
     }
 
     case KnownInsults(insults) => {
-      println(s"---------- Known Insults from ${sender.path.name}")
+      println(s"---------- Known Insults from ${sender().path.name}")
       insults.foreach { i =>
         println(s"[${i.id}]: ${i.content}")
       }
     }
 
     case KnownComebacks(comebacks) => {
-      println(s"---------- Known Comebacks from ${sender.path.name}")
+      println(s"---------- Known Comebacks from ${sender().path.name}")
       comebacks.foreach { i =>
         println(s"[${i.id}]: ${i.content}")
       }
