@@ -10,6 +10,7 @@ object Protocol {
   case class ComebackMessage(comeback: Comeback) extends Message
   case class KnownInsults(insults: List[Insult]) extends Message
   case class KnownComebacks(insults: List[Comeback]) extends Message
+  case class Select(id: Int) extends Message
   case class SelectInsult(id: Int) extends Message
   case class Register(player: ActorRef) extends Message
   case class Unregister(player: ActorRef) extends Message
@@ -28,4 +29,13 @@ object Protocol {
   case object ListPlayers extends Message
   case object GetScores extends Message
   case object Leave extends Message
+
+  sealed trait State
+  case object Insulting extends State
+  case object Insulted extends State
+
+  sealed trait Data
+  case object Uninitialised extends Data
+  final case class MyGameData(score: Int, insults: List[Insult], comebacks:List[Comeback]) extends Data
+  final case class CurrentInsult(insult: Insult) extends Data
 }
