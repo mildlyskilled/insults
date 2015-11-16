@@ -1,8 +1,6 @@
-package com.mildlyskilled
-
 import akka.actor.{ActorSystem, Props}
 import com.mildlyskilled.actors.Player
-import com.mildlyskilled.messages.Protocol.{Leave, Select, Register}
+import com.mildlyskilled.messages.Protocol.{Leave, Register, Select}
 import com.mildlyskilled.models.Repo
 import com.typesafe.config.ConfigFactory
 
@@ -63,6 +61,6 @@ object Player extends App {
     case _ => println("I did not understand that message")
   }
 
-
   playerActor ! Leave
+  system.shutdown()
 }
