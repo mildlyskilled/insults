@@ -28,7 +28,7 @@ trait Playable extends Actor with ActorLogging {
 
     case GoAway => handleGoAway()
 
-    case Leave => context.system.shutdown()
+    case Leave => context.stop(self)
 
     case Registered => handleRegisteredMessage()
   }
