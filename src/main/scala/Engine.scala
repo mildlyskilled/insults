@@ -2,6 +2,7 @@ import akka.actor.{Props, ActorSystem}
 import com.mildlyskilled.actors.GameEngine
 import com.mildlyskilled.messages.Protocol.Initialise
 import com.mildlyskilled.models.Repo
+import com.typesafe.config.ConfigFactory
 
 /**
   * Created by kwabena on 12/11/2015.
@@ -10,8 +11,8 @@ object Engine extends App {
 
   val repo = new Repo
 
-  val system = ActorSystem("InsultSystem")
-  val gameEngine = system.actorOf(Props(classOf[GameEngine], repo), name = "insult-sword-fighting")
+  val system = ActorSystem("InsultSystem", ConfigFactory.load.getConfig("engine"))
+  val gameEngine = system.actorOf(Props(classOf[GameEngine], repo), name = "engine")
 
   def printHelp(): Unit = {
     println("Welcome Instructions are as follows (type)")

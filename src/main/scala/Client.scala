@@ -1,6 +1,6 @@
 import akka.actor.{ActorSystem, Props}
 import com.mildlyskilled.actors.Player
-import com.mildlyskilled.messages.Protocol.{Leave, Register, Select}
+import com.mildlyskilled.messages.Protocol.{Unregister, Leave, Register, Select}
 import com.mildlyskilled.models.Repo
 import com.typesafe.config.ConfigFactory
 
@@ -9,15 +9,17 @@ import scala.tools.jline.console.ConsoleReader
 /**
   * Created by kwabena on 13/11/2015.
   */
-object Player extends App {
+object Client extends App {
 
   val repo = new Repo
-  val system = ActorSystem("InsultSystem")
+  val system = ActorSystem("InsultSystem", ConfigFactory.load.getConfig("player"))
   val serverConfig = ConfigFactory.load.getConfig("engine")
   val serverHostName = serverConfig.getString("akka.remote.netty.tcp.hostname")
   val serverPort = serverConfig.getString("akka.remote.netty.tcp.port")
-  val serverPath = s"akka.tcp://InsultSwordFighting@$serverHostName:$serverPort/user/engine"
+  val serverPath = s"akka.tcp://InsultSystem@$serverHostName:$serverPort/user/engine"
   val gameEngine = system.actorSelection(serverPath)
+  println(s"Got game engine at ${gameEngine.pathString}")
+
   val playerActor = system.actorOf(
     Props(classOf[Player], repo.getRandomInsults(2), repo.getRandomComebacks(2)),
     name = "player")
@@ -48,7 +50,7 @@ object Player extends App {
 
     case "start" => {
       if (!started) {
-        gameEngine ! Register(playerActor)
+        gameEngine.tell(Register(playerActor), playerActor)
         started = true
       } else {
         println(Console.RED + "You are already in a game" + Console.RESET)
@@ -56,12 +58,13 @@ object Player extends App {
     }
 
     case numberSelectorPattern(x) => {
-        playerActor ! Select(x.toInt)
+      gameEngine.tell(Select(x.toInt), playerActor)
     }
 
     case _ => println("I did not understand that message")
   }
 
+  gameEngine ! Unregister(playerActor)
   playerActor ! Leave
   system.shutdown()
 }

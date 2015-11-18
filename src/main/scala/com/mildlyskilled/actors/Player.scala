@@ -63,4 +63,11 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
       sender ! ConcedeRound
       become(awaitingStatus)
   }
+
+  override def receive = {
+    case Register =>
+      log.info("Registered to play ")
+      become(awaitingStatus)
+      sender ! ReadyToEngage
+  }
 }

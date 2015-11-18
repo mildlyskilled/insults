@@ -30,6 +30,10 @@ trait Playable extends Actor with ActorLogging {
 
     case ComebackMessage(c) => sender ! ConcedeRound
 
+    case Registered => log.info("Registered to play")
+
     case Leave => context stop self
   }
+
+  override def preStart = log.info(s"Starting ${self.path.name}")
 }
