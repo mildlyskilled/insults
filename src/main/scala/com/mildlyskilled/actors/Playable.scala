@@ -2,7 +2,7 @@ package com.mildlyskilled.actors
 
 import akka.actor.{ActorLogging, Actor}
 import com.mildlyskilled.messages.Protocol._
-import com.mildlyskilled.models.{Comeback, Insult}
+import com.mildlyskilled.models._
 
 
 trait Playable extends Actor with ActorLogging {
@@ -12,68 +12,28 @@ trait Playable extends Actor with ActorLogging {
   implicit val insults = knownInsults
   implicit val comebacks = knownComebacks
 
+
   def receive = {
-    case Info(msg) => log.info(Console.YELLOW + msg + Console.RESET)
 
-    case InsultMessage(insult) => handleInsult(insult)
+    case Select(x) =>
+      insults find { i => i.id == x } match {
+        case Some(insult) => sender ! InsultMessage(insult)
+        case None => sender ! Info("You do not know this Insult")
+      }
 
-    case ComebackMessage(comeback) => handleComeback(comeback)
+    // now we must find a good comeback to this insult
+    case InsultMessage(x) =>
+      comebacks find { c => c.id == x.id } match {
+        case Some(comeback) => sender ! ComebackMessage(comeback)
+        case None => sender ! ConcedeRound
+      }
 
-    case GetInsults => handleReturnInsults()
+    case ComebackMessage(c) => sender ! ConcedeRound
 
-    case GetComebacks => handleReturnComebacks()
+    case Registered => log.info("Registered to play")
 
-    case SelectInsult(id) => handleSelectInsult(id)
-
-    case ConcedeGame => handleConcedeGame()
-
-    case GoAway => handleGoAway()
-
-    case Leave => context.system.shutdown()
-
-    case Registered => handleRegisteredMessage()
+    case Leave => context stop self
   }
 
-  def handleInsult(i: Insult)(implicit comebacks: List[Comeback]) = {
-    log.info(Console.GREEN + s"${i.content}" + Console.RESET)
-    comebacks find (_.id == i.id) match {
-      case None => sender() ! ConcedeRound
-      case Some(c) => sender() ! ComebackMessage(c)
-    }
-  }
-
-  def handleReturnInsults()(implicit insults: List[Insult]) = {
-    sender() ! insults
-  }
-
-  def handleSelectInsult(id: Int)(implicit insults: List[Insult]) = {
-    insults find { i => i.id == id } match {
-      case None => log.info(Console.RED + "You don't know this insult" + Console.RESET)
-      case Some(i) => sender() ! InsultMessage(i)
-    }
-  }
-
-  def handleReturnComebacks()(implicit comebacks: List[Comeback]) = {
-    sender() ! KnownComebacks(comebacks)
-  }
-
-  def handleGoAway() = {
-    log.info(Console.RED + s"${self.path.name} leaving now" + Console.RESET)
-    context stop self
-  }
-
-  def handleConcedeGame() = {
-    log.info(Console.RED + s"I have lost ${self.path.name} concedes" + Console.RESET)
-    context stop self
-  }
-
-  def handleComeback(c: Comeback) = {
-    log.info(Console.GREEN + s"${c.content}" + Console.RESET)
-    sender() ! ConcedeRound
-  }
-
-  def handleRegisteredMessage() = {
-    sender() ! ReadyToEngage
-  }
-
+  override def preStart = log.info(s"Starting ${self.path.name}")
 }
