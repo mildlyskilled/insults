@@ -7,33 +7,60 @@ import scala.collection.mutable
 case class Player(override val knownInsults: List[Insult], override val knownComebacks: List[Comeback])
   extends Playable {
 
+  import context._
+
   var learnedComebacks = mutable.Set.empty[Comeback]
   var learnedInsults = mutable.Set.empty[Insult]
   override implicit val insults = knownInsults ::: learnedInsults.toList
+  override implicit val comebacks = knownComebacks ::: learnedComebacks.toList
 
-  override def handleInsult(i: Insult) = {
-    log.info(Console.BLUE + s"${i.content}" + Console.RESET)
-    if ((knownInsults ::: learnedInsults.toList).takeWhile(_.id == i.id).isEmpty) {
-      learnedInsults += i
-      sender() ! ConcedeRound
-    } else {
-      sender() ! WaitingForEngagement
-      handleReturnComebacks()
-    }
+  def awaitingStatus: Receive = {
+    case YourTurn =>
+      become(insulter)
+
+    case InsultMessage(i) =>
+      become(insulted)
+      self ! InsultMessage(i)
+
+    case ComebackMessage(c) =>
+      become(insulter)
+      self ! ComebackMessage(c)
+
   }
 
-  override def handleComeback(c: Comeback) = {
-    log.info(Console.GREEN + s"${c.content}" + Console.RESET)
-    learnedComebacks += c
-    sender() ! ConcedeRound
+  def insulted: Receive = {
+    case Select(x) =>
+      comebacks find { c => c.id == x } match {
+        case Some(comeback) => sender ! ComebackMessage(comeback)
+        case None => sender ! Info("You do not know this comeback")
+      }
+
+    case InsultMessage(i) =>
+      comebacks find { c => c.id == i.id } match {
+        case Some(comeback) => sender ! ComebackMessage(comeback)
+        case None =>
+          sender ! ConcedeRound
+          learnedInsults += i
+          become(awaitingStatus)
+      }
+
   }
 
-  override def handleReturnInsults() = {
-    sender() ! KnownInsults(knownInsults ::: learnedInsults.toList)
-  }
+  def insulter: Receive = {
+    case Select(x) =>
+      insults find {i => i.id == x } match {
 
-  override def handleReturnComebacks() = {
-    sender() ! KnownComebacks(knownComebacks ::: learnedComebacks.toList)
-  }
+        case Some(insult) =>
+          sender ! InsultMessage(insult)
+          become(awaitingStatus)
 
+        case None => sender ! Info("You do not know this insult")
+      }
+
+    case InsultMessage(x) => sender ! Info("It's my turn to insult not yours")
+
+    case ComebackMessage(x) =>
+      sender ! ConcedeRound
+      become(awaitingStatus)
+  }
 }

@@ -95,13 +95,5 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
       registry(p) = 2
     }
 
-    case WaitingForEngagement => toComeback = sender()
-
-    case ReadyToEngage => toInsult = sender()
-
-    case Turn => {
-      log.info(Console.GREEN + toInsult.path.name + " to insult " + Console.RESET)
-      log.info(Console.GREEN + toComeback.path.name + " to comeback " + Console.RESET)
-    }
   }
 }
