@@ -64,7 +64,6 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
     case ConcedeRound => {
       log.info(Console.RED + s"${sender().path.name} concedes this round" + Console.RESET)
       registry(sender()) = registry(sender()) - 1
-
       if (registry(sender()) == 0) {
         sender ! ConcedeGame
         registry -= sender
@@ -99,7 +98,7 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
 
     case ReadyToEngage => toInsult = sender()
 
-    case Turn => {
+    case YourTurn => {
       log.info(Console.GREEN + toInsult.path.name + " to insult " + Console.RESET)
       log.info(Console.GREEN + toComeback.path.name + " to comeback " + Console.RESET)
     }

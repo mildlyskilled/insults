@@ -14,7 +14,7 @@ object Protocol {
   case class Register(player: ActorRef) extends Message
   case class Unregister(player: ActorRef) extends Message
   case class ResetPlayerScore(player: ActorRef) extends Message
-  case object Turn extends Message
+  case object YourTurn extends Message
   case object Registered extends Message
   case object GoAway extends Message
   case object WaitingForEngagement extends Message

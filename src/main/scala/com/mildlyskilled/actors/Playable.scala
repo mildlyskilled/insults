@@ -10,6 +10,7 @@ trait Playable extends Actor with ActorLogging {
   val knownInsults: List[Insult]
   val knownComebacks: List[Comeback]
   implicit val insults = knownInsults
+  implicit val comebacks = knownComebacks
 
   def receive = {
     case Info(msg) => log.info(Console.YELLOW + msg + Console.RESET)
@@ -33,7 +34,7 @@ trait Playable extends Actor with ActorLogging {
     case Registered => handleRegisteredMessage()
   }
 
-  def handleInsult(i: Insult) (implicit comebacks: List[Comeback]) = {
+  def handleInsult(i: Insult)(implicit comebacks: List[Comeback]) = {
     log.info(Console.GREEN + s"${i.content}" + Console.RESET)
     comebacks find (_.id == i.id) match {
       case None => sender() ! ConcedeRound
@@ -41,21 +42,19 @@ trait Playable extends Actor with ActorLogging {
     }
   }
 
-  def handleComeback(c: Comeback) = {
-    log.info(Console.GREEN + s"${c.content}" + Console.RESET)
-    sender() ! ConcedeRound
-  }
-
-  def handleReturnInsults() = {
-    sender() ! KnownInsults(knownInsults)
+  def handleReturnInsults()(implicit insults: List[Insult]) = {
+    sender() ! insults
   }
 
   def handleSelectInsult(id: Int)(implicit insults: List[Insult]) = {
-    println(insults)
     insults find { i => i.id == id } match {
       case None => log.info(Console.RED + "You don't know this insult" + Console.RESET)
       case Some(i) => sender() ! InsultMessage(i)
     }
+  }
+
+  def handleReturnComebacks()(implicit comebacks: List[Comeback]) = {
+    sender() ! KnownComebacks(comebacks)
   }
 
   def handleGoAway() = {
@@ -68,8 +67,9 @@ trait Playable extends Actor with ActorLogging {
     context stop self
   }
 
-  def handleReturnComebacks() = {
-    sender() ! KnownComebacks(knownComebacks)
+  def handleComeback(c: Comeback) = {
+    log.info(Console.GREEN + s"${c.content}" + Console.RESET)
+    sender() ! ConcedeRound
   }
 
   def handleRegisteredMessage() = {
