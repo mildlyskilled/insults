@@ -1,24 +1,24 @@
 import akka.actor.{ActorSystem, Props}
+import akka.util.Timeout
+import scala.concurrent.duration._
+import scala.concurrent.Await
+import scala.tools.jline.console.ConsoleReader
+
 import com.mildlyskilled.actors.Player
 import com.mildlyskilled.messages.Protocol.{Unregister, Leave, Register, Select}
 import com.mildlyskilled.models.Repo
 import com.typesafe.config.ConfigFactory
 
-import scala.tools.jline.console.ConsoleReader
-
-/**
-  * Created by kwabena on 13/11/2015.
-  */
 object Client extends App {
 
+  implicit val resolveTimeout = Timeout(5 seconds)
   val repo = new Repo
   val system = ActorSystem("InsultSystem", ConfigFactory.load.getConfig("player"))
   val serverConfig = ConfigFactory.load.getConfig("engine")
   val serverHostName = serverConfig.getString("akka.remote.netty.tcp.hostname")
   val serverPort = serverConfig.getString("akka.remote.netty.tcp.port")
   val serverPath = s"akka.tcp://InsultSystem@$serverHostName:$serverPort/user/engine"
-  val gameEngine = system.actorSelection(serverPath)
-  println(s"Got game engine at ${gameEngine.pathString}")
+  val gameEngine = Await.result(system.actorSelection(serverPath).resolveOne, resolveTimeout.duration)
 
   val playerActor = system.actorOf(
     Props(classOf[Player], repo.getRandomInsults(2), repo.getRandomComebacks(2)),
@@ -50,7 +50,7 @@ object Client extends App {
 
     case "start" => {
       if (!started) {
-        gameEngine.tell(Register(playerActor), playerActor)
+        gameEngine ! Register(playerActor)
         started = true
       } else {
         println(Console.RED + "You are already in a game" + Console.RESET)
@@ -58,7 +58,7 @@ object Client extends App {
     }
 
     case numberSelectorPattern(x) => {
-      gameEngine.tell(Select(x.toInt), playerActor)
+      playerActor.tell(Select(x.toInt), gameEngine)
     }
 
     case _ => println("I did not understand that message")

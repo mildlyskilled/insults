@@ -12,29 +12,42 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
   var toComeback: ActorRef = _
   var toInsult: ActorRef = _
 
+  import context._
 
-  def receive = {
-    case Initialise => log.info(s"Starting game engine ${self.path.name}")
+  def waiting: Receive = {
+    case Register(player) => handleRegister(player)
+    case Unregister(player) => handleUnregister(player)
+  }
 
-    case Register(player) => {
-      log.info(s"${player.path.name} has entered the game")
-      registry += (player -> 2)
-      player ! Registered
-    }
+  def ready: Receive = {
+    case Initialise =>
+      sender ! Info("The game engine has already been initialised")
 
-    case Unregister(player) => {
+    case Register(player) =>
+      player ! Info("Sorry the room is full")
+
+    case Unregister(player) =>
       registry -= player
-      player ! GoAway
-    }
+      player ! Leave
+      become(waiting)
 
-    case ListPlayers => {
+    case ReadyToEngage =>
+      log.info(s"${sender.path.name} is ready")
+      sender ! YourTurn
+
+    case ListPlayers =>
       println("Current players in this game")
       registry.foreach { p => println(p._1) }
-    }
 
-    case ConcedeRound => {
+    case InsultMessage(insult) =>
+      registry.keys.filterNot(_ == sender).head.tell(InsultMessage(insult), self)
+
+    case GetScores =>
+      registry.foreach { p => println(s"${p._1.path.name}: ${p._2}") }
+
+    case ConcedeRound =>
       log.info(Console.RED + s"${sender().path.name} concedes this round" + Console.RESET)
-      registry(sender()) = registry(sender()) - 1
+      registry.values.filterNot(_ != sender).head += 1
 
       if (registry(sender()) == 0) {
         sender ! ConcedeGame
@@ -42,17 +55,24 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
         log.info(s"${sender().path.name} leaves")
       }
 
-    }
 
-    case GetScores => {
-      registry.foreach { p => println(s"${p._1.path.name}: ${p._2}") }
-    }
+  }
 
-    case ResetPlayerScore(p) => {
-      registry(p) = 2
-    }
+  def receive = {
+    case Initialise =>
+      log.info(s"Starting game engine ${self.path.name}")
+      become(waiting)
+  }
 
-    case Select(x) =>
-      registry.foreach(p => p._1.tell(Select(x), sender()))
+  def handleRegister(player: ActorRef) = {
+    log.info(s"${player.path.name} has entered the game")
+    registry += (player -> 2)
+    player ! Registered
+  }
+
+  def handleUnregister(player: ActorRef) = {
+    log.info(s"${player.path.name} is leaving the game")
+    registry -= player
+    player ! Leave
   }
 }

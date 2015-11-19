@@ -16,6 +16,7 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
 
   def awaitingStatus: Receive = {
     case YourTurn =>
+      insults foreach{ i  => println(s"[${i.id}] ${i.content}") }
       become(insulter)
 
     case InsultMessage(i) =>
@@ -49,7 +50,6 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
   def insulter: Receive = {
     case Select(x) =>
       insults find {i => i.id == x } match {
-
         case Some(insult) =>
           sender ! InsultMessage(insult)
           become(awaitingStatus)
@@ -65,9 +65,13 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
   }
 
   override def receive = {
-    case Register =>
-      log.info("Registered to play ")
-      become(awaitingStatus)
+    case Registered =>
+      log.info(s"Registered to play send ready to engage message to ${sender.path.name}")
       sender ! ReadyToEngage
+      become(awaitingStatus)
+
+    case YourTurn =>
+      log.info("I still don't have a state but that will change pretty soon")
+      become(insulter)
   }
 }
