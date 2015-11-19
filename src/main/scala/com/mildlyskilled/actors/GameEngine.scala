@@ -2,7 +2,7 @@ package com.mildlyskilled.actors
 
 import akka.actor._
 import com.mildlyskilled.messages.Protocol._
-import com.mildlyskilled.models.{Repo}
+import com.mildlyskilled.models.Repo
 
 import scala.collection.mutable
 
@@ -17,6 +17,7 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
   def waiting: Receive = {
     case Register(player) => handleRegister(player)
     case Unregister(player) => handleUnregister(player)
+    case ListPlayers => handleListPlayers()
   }
 
   def ready: Receive = {
@@ -35,9 +36,7 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
       log.info(s"${sender.path.name} is ready")
       sender ! YourTurn
 
-    case ListPlayers =>
-      println("Current players in this game")
-      registry.foreach { p => println(p._1) }
+    case ListPlayers => handleListPlayers()
 
     case InsultMessage(insult) =>
       registry.keys.filterNot(_ == sender).head.tell(InsultMessage(insult), self)
@@ -47,14 +46,13 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
 
     case ConcedeRound =>
       log.info(Console.RED + s"${sender().path.name} concedes this round" + Console.RESET)
-      registry.values.filterNot(_ != sender).head += 1
+      registry.values.filterNot(_ != sender).head + 1
 
       if (registry(sender()) == 0) {
         sender ! ConcedeGame
         registry -= sender
         log.info(s"${sender().path.name} leaves")
       }
-
 
   }
 
@@ -74,5 +72,10 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
     log.info(s"${player.path.name} is leaving the game")
     registry -= player
     player ! Leave
+  }
+
+  def handleListPlayers() = {
+    println("Current players in this game")
+    registry.foreach { p => println(p._1.path.name) }
   }
 }

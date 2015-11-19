@@ -5,7 +5,7 @@ import scala.concurrent.Await
 import scala.tools.jline.console.ConsoleReader
 
 import com.mildlyskilled.actors.Player
-import com.mildlyskilled.messages.Protocol.{Unregister, Leave, Register, Select}
+import com.mildlyskilled.messages.Protocol._
 import com.mildlyskilled.models.Repo
 import com.typesafe.config.ConfigFactory
 
@@ -48,18 +48,19 @@ object Client extends App {
 
   Iterator.continually(new ConsoleReader().readLine("> ")).takeWhile(_ != "exit").foreach {
 
-    case "start" => {
+    case "start" =>
       if (!started) {
         gameEngine ! Register(playerActor)
         started = true
       } else {
         println(Console.RED + "You are already in a game" + Console.RESET)
       }
-    }
 
-    case numberSelectorPattern(x) => {
-      playerActor.tell(Select(x.toInt), gameEngine)
-    }
+
+    case "play" => gameEngine ! ReadyToEngage
+
+    case numberSelectorPattern(x) => playerActor.tell(Select(x.toInt), gameEngine)
+
 
     case _ => println("I did not understand that message")
   }

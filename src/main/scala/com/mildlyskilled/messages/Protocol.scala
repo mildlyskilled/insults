@@ -19,8 +19,6 @@ object Protocol {
 
   final case class Select(id: Int) extends Message
 
-  final case class SelectInsult(id: Int) extends Message
-
   final case class Register(player: ActorRef) extends Message
 
   final case class Unregister(player: ActorRef) extends Message
@@ -30,10 +28,6 @@ object Protocol {
   case object YourTurn extends Message
 
   case object Registered extends Message
-
-  case object GoAway extends Message
-
-  case object WaitingForEngagement extends Message
 
   case object ReadyToEngage extends Message
 
