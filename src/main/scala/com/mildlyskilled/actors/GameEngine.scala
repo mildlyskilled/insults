@@ -36,7 +36,7 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
 
     case InsultMessage(insult) => handleInsultMessage(insult)
 
-    case GetScores => arena.head.players.foreach { p => println(s"${p._1.path.name}: ${p._2.toString}") }
+    case GetScores => getArena(sender()).players.foreach { p => println(s"${p._1.path.name}: ${p._2.toString}") }
 
     case ConcedeRound => handleConcedeRound()
 
