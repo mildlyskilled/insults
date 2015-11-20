@@ -59,6 +59,8 @@ object Client extends App {
 
     case "play" => gameEngine ! ReadyToEngage
 
+    case "list" => gameEngine ! ListPlayers
+
     case numberSelectorPattern(x) => playerActor.tell(Select(x.toInt), gameEngine)
 
 

@@ -2,15 +2,13 @@ package com.mildlyskilled.actors
 
 import akka.actor._
 import com.mildlyskilled.messages.Protocol._
-import com.mildlyskilled.models.Repo
+import com.mildlyskilled.models.{Insult, Arena, Repo}
 
 import scala.collection.mutable
 
 class GameEngine(val repo: Repo) extends Actor with ActorLogging {
 
-  var registry = mutable.Map.empty[ActorRef, Int]
-  var toComeback: ActorRef = _
-  var toInsult: ActorRef = _
+  var registry = mutable.Seq.empty[Arena]
 
   import context._
 
@@ -24,11 +22,9 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
     case Initialise =>
       sender ! Info("The game engine has already been initialised")
 
-    case Register(player) =>
-      player ! Info("Sorry the room is full")
+    case Register(player) => handleRegister(player)
 
     case Unregister(player) =>
-      registry -= player
       player ! Leave
       become(waiting)
 
@@ -38,23 +34,52 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
 
     case ListPlayers => handleListPlayers()
 
-    case InsultMessage(insult) =>
-      registry.keys.filterNot(_ == sender).head.tell(InsultMessage(insult), self)
+    case InsultMessage(insult) => handleInsultMessage(insult)
 
-    case GetScores =>
-      registry.foreach { p => println(s"${p._1.path.name}: ${p._2}") }
+    case GetScores => arena.head.players.foreach { p => println(s"${p._1.path.name}: ${p._2.toString}") }
 
-    case ConcedeRound =>
-      log.info(Console.RED + s"${sender().path.name} concedes this round" + Console.RESET)
-      registry.values.filterNot(_ != sender).head + 1
-
-      if (registry(sender()) == 0) {
-        sender ! ConcedeGame
-        registry -= sender
-        log.info(s"${sender().path.name} leaves")
-      }
+    case ConcedeRound => handleConcedeRound()
 
   }
+
+  def handleRegister(player: ActorRef) = {
+    log.info(s"${player.path.name} has entered the game")
+    registry = registry :+ Arena(player.path.name, mutable.Map(player -> 0))
+    println(registry)
+    player ! Registered
+  }
+
+  def handleUnregister(player: ActorRef) = {
+    log.info(s"${player.path.name} is leaving the game")
+    registry = registry.filter(a => a.name == player.path.name)
+    player ! Leave
+  }
+
+  def handleListPlayers() = {
+    println("Current players in this game")
+    getArena(sender()).players foreach println
+
+  }
+
+  def handleInsultMessage(insult: Insult) = {
+    if (getArena(sender()).players.nonEmpty)
+      getArena(sender()).getPlayers.filterNot(player => player != sender()).foreach(_ ! InsultMessage(insult))
+  }
+
+  def handleConcedeRound() = {
+    log.info(Console.RED + s"${sender().path.name} concedes this round" + Console.RESET)
+    getArena(sender()).players.filterNot(player => player._1 == sender()).foreach {
+      opponent => {
+        getArena(sender()).addScore(opponent._1)
+        opponent._1 ! YourTurn
+      }
+    }
+  }
+
+  def getArena(player: ActorRef) = {
+    registry.filter(arena => arena.name == sender.path.name).head
+  }
+
 
   def receive = {
     case Initialise =>
@@ -62,20 +87,4 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
       become(waiting)
   }
 
-  def handleRegister(player: ActorRef) = {
-    log.info(s"${player.path.name} has entered the game")
-    registry += (player -> 2)
-    player ! Registered
-  }
-
-  def handleUnregister(player: ActorRef) = {
-    log.info(s"${player.path.name} is leaving the game")
-    registry -= player
-    player ! Leave
-  }
-
-  def handleListPlayers() = {
-    println("Current players in this game")
-    registry.foreach { p => println(p._1.path.name) }
-  }
 }
