@@ -12,9 +12,7 @@ trait Playable extends Actor with ActorLogging {
   implicit val insults = knownInsults
   implicit val comebacks = knownComebacks
 
-
   def receive = {
-
     case Select(x) =>
       insults find { i => i.id == x } match {
         case Some(insult) => sender ! InsultMessage(insult)
@@ -23,17 +21,30 @@ trait Playable extends Actor with ActorLogging {
 
     // now we must find a good comeback to this insult
     case InsultMessage(x) =>
+      log.info(s"Received insult from ${sender.path.name}")
       comebacks find { c => c.id == x.id } match {
-        case Some(comeback) => sender ! ComebackMessage(comeback)
-        case None => sender ! ConcedeRound
+        case Some(comeback) => sender.tell(ComebackMessage(comeback), self)
+        case None =>
+          print(Console.YELLOW)
+          println(s"${self.path.name} Comebacks: ")
+          comebacks foreach (x => println(s"${x.id}: ${x.content}"))
+          println(Console.RESET)
+          sender.tell(ConcedeRound, self)
       }
 
     case ComebackMessage(c) => sender ! ConcedeRound
 
     case Registered => log.info("Registered to play")
 
-    case Leave => context stop self
+    case Leave => {
+      sender() ! ConcedeGame
+      context stop self
+    }
+
+    case _ => log.info("I did not understand that message")
   }
 
-  override def preStart = log.info(s"Starting ${self.path.name}")
+  override def preStart = {
+    log.info(s"Starting ${self.path.name}")
+  }
 }

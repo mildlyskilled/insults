@@ -20,10 +20,11 @@ object Client extends App {
   val serverPath = s"akka.tcp://InsultSystem@$serverHostName:$serverPort/user/engine"
   val gameEngine = Await.result(system.actorSelection(serverPath).resolveOne, resolveTimeout.duration)
 
+  val user = new ConsoleReader().readLine("identify yourself: ")
+
   val playerActor = system.actorOf(
     Props(classOf[Player], repo.getRandomInsults(2), repo.getRandomComebacks(2)),
-    name = "player")
-
+    name = user)
 
   var started = false
   val numberSelectorPattern = """(\d+)$""".r
@@ -50,24 +51,26 @@ object Client extends App {
 
     case "start" =>
       if (!started) {
-        gameEngine ! Register(playerActor)
+        gameEngine.tell(Register, playerActor)
         started = true
       } else {
         println(Console.RED + "You are already in a game" + Console.RESET)
       }
 
 
-    case "play" => gameEngine ! ReadyToEngage
+    case "play" => gameEngine.tell(ReadyToEngage, playerActor)
 
-    case "list" => gameEngine ! ListPlayers
+    case "list" => gameEngine.tell(ListPlayers, playerActor)
+
+    case "scores" => gameEngine.tell(PrintScores, playerActor)
 
     case numberSelectorPattern(x) => playerActor.tell(Select(x.toInt), gameEngine)
 
 
-    case _ => println("I did not understand that message")
+    case _ => println("Unknown command")
   }
 
-  gameEngine ! Unregister(playerActor)
+  gameEngine.tell(Unregister, playerActor)
   playerActor ! Leave
   system.shutdown()
 }

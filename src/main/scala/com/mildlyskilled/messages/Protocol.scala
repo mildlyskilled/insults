@@ -19,17 +19,21 @@ object Protocol {
 
   final case class Select(id: Int) extends Message
 
-  final case class Register(player: ActorRef) extends Message
-
-  final case class Unregister(player: ActorRef) extends Message
-
   final case class ResetPlayerScore(player: ActorRef) extends Message
+
+  case object ListPlayers extends Message
+
+  case object ReadyToEngage extends Message
+
+  case object Unregister extends Message
+
+  case object Register extends Message
 
   case object YourTurn extends Message
 
   case object Registered extends Message
 
-  case object ReadyToEngage extends Message
+  case object PrintScores extends Message
 
   case object GetInsults extends Message
 
@@ -42,10 +46,6 @@ object Protocol {
   case object Initialise extends Message
 
   case object AnotherGame extends Message
-
-  case object ListPlayers extends Message
-
-  case object GetScores extends Message
 
   case object Leave extends Message
 }

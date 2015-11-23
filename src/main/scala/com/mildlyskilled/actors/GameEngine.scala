@@ -2,7 +2,7 @@ package com.mildlyskilled.actors
 
 import akka.actor._
 import com.mildlyskilled.messages.Protocol._
-import com.mildlyskilled.models.{Insult, Arena, Repo}
+import com.mildlyskilled.models.{Arena, Comeback, Insult, Repo}
 
 import scala.collection.mutable
 
@@ -13,78 +13,136 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
   import context._
 
   def waiting: Receive = {
-    case Register(player) => handleRegister(player)
-    case Unregister(player) => handleUnregister(player)
+    case Register => handleRegister()
+    case Unregister => handleUnregister()
     case ListPlayers => handleListPlayers()
+    case ReadyToEngage => handleReadyToEngage()
   }
 
   def ready: Receive = {
     case Initialise =>
       sender ! Info("The game engine has already been initialised")
 
-    case Register(player) => handleRegister(player)
+    case Register => handleRegister()
 
-    case Unregister(player) =>
-      player ! Leave
+    case Unregister =>
+      sender() ! Leave
       become(waiting)
-
-    case ReadyToEngage =>
-      log.info(s"${sender.path.name} is ready")
-      sender ! YourTurn
 
     case ListPlayers => handleListPlayers()
 
     case InsultMessage(insult) => handleInsultMessage(insult)
 
-    case GetScores => getArena(sender()).players.foreach { p => println(s"${p._1.path.name}: ${p._2.toString}") }
+    case ComebackMessage(comeback) => handleComebackMessage(comeback)
+
+    case PrintScores => getArenaByPlayer(sender()) match {
+      case Some(arena) => arena.players.foreach { p => println(s"${p._1.path.name}: ${p._2.toString}") }
+      case None => log.info(Console.RED + " This player doesn't belong to an arena " + Console.RESET)
+    }
 
     case ConcedeRound => handleConcedeRound()
 
+    case ReadyToEngage => handleReadyToEngage()
+
   }
 
-  def handleRegister(player: ActorRef) = {
-    log.info(s"${player.path.name} has entered the game")
-    registry = registry :+ Arena(player.path.name, mutable.Map(player -> 0))
-    println(registry)
-    player ! Registered
+  def handleComebackMessage(comeback: Comeback): Unit = {
+    log.info(s"Got comeback from ${sender.path.name}")
+    getArenaByPlayer(sender()) match {
+      case Some(arena) => arena.getPlayers.filterNot(_ == sender()).foreach(_ ! ComebackMessage(comeback))
+      case None => sender() ! Info("You don't seem to be registered in an arena")
+    }
   }
 
-  def handleUnregister(player: ActorRef) = {
-    log.info(s"${player.path.name} is leaving the game")
-    registry = registry.filter(a => a.name == player.path.name)
-    player ! Leave
+  def handleRegister() = {
+    log.info(s"${sender.path.name} has entered the game")
+    val arena = Arena(sender.path.name, mutable.Map.empty[ActorRef, Int])
+    arena.addPlayer(sender())
+    registry = registry :+ arena
+    sender() ! Registered
+  }
+
+  def handleUnregister() = {
+    log.info(s"${sender.path.name} is leaving the game")
+    registry = registry.filter(a => a.name == sender.path.name)
+    sender() ! Leave
   }
 
   def handleListPlayers() = {
-    println("Current players in this game")
-    getArena(sender()).players foreach println
-
+    println(Console.GREEN + "Current players in this game" + Console.RESET)
+    getArenaByPlayer(sender()) match {
+      case Some(arena) => arena.getPlayers.foreach { p => println("> " + Console.GREEN + p.path.name + Console.RESET) }
+      case None => log.info("You don't seem to belong to any arenas")
+    }
   }
 
   def handleInsultMessage(insult: Insult) = {
-    if (getArena(sender()).players.nonEmpty)
-      getArena(sender()).getPlayers.filterNot(player => player != sender()).foreach(_ ! InsultMessage(insult))
+      getArenaByPlayer(sender()) match  {
+        case Some(arena) => arena.getPlayers.filterNot(p => p == sender()).foreach(_.tell(InsultMessage(insult), self))
+        case None => Info("You are not in an arena")
+      }
   }
 
   def handleConcedeRound() = {
     log.info(Console.RED + s"${sender().path.name} concedes this round" + Console.RESET)
-    getArena(sender()).players.filterNot(player => player._1 == sender()).foreach {
-      opponent => {
-        getArena(sender()).addScore(opponent._1)
-        opponent._1 ! YourTurn
+    getArenaByPlayer(sender()) match {
+      case Some(arena) => arena.getPlayers.filterNot(player => player == sender()).foreach {
+        opponent => {
+          arena.incrementScore(opponent)
+          opponent ! Info("You win this round")
+          opponent ! YourTurn
+          if (arena.getPlayerScore(opponent) == arena.scoreLimit) {
+            // if the arena belongs to the sender reset the sender score and remove pirate for another duel
+            if (opponent.path.name == arena.name) {
+              opponent ! Info("You are victorious")
+              sender() ! Leave
+              arena.resetScore(opponent)
+              arena.removePlayer(sender())
+            }
+          }
+
+        }
       }
+      case None => log.info(s"${sender.path.name} doesn't appear to have an arena")
     }
+
   }
 
-  def getArena(player: ActorRef) = {
-    registry.filter(arena => arena.name == sender.path.name).head
+  def handleReadyToEngage() = {
+    log.info(s"${sender.path.name} is ready")
+    getArenaByPlayer(sender) match {
+
+      case Some(arena) => {
+        getArenaByName("pirate") match {
+          case Some(pirateArena) => sender() ! Info("You're already engaged in battle")
+          case None => arena.addPlayer(spawnPirate("pirate"))
+        }
+      }
+
+      case None => sender() ! Info("You don't seem to be in an arena")
+    }
+    sender() ! YourTurn
+    become(ready)
+  }
+
+  def getArenaByName(arenaName: String) = {
+    registry.find(arena => arena.name == arenaName)
+  }
+
+  def getArenaByPlayer(player: ActorRef) = registry.find(arena => arena.players.contains(player))
+
+  def spawnPirate(name: String) = {
+    context.system.actorOf(
+      Props(classOf[Pirate], repo.getRandomInsults(2), repo.getRandomComebacks(2)),
+      name = name)
   }
 
 
   def receive = {
     case Initialise =>
-      log.info(s"Starting game engine ${self.path.name}")
+      log.info(s"Starting game engine: ${self.path.name}")
       become(waiting)
+
   }
 
 }

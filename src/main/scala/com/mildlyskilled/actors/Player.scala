@@ -16,7 +16,7 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
 
   def awaitingStatus: Receive = {
     case YourTurn =>
-      insults foreach{ i  => println(s"[${i.id}] ${i.content}") }
+      printInsults()
       become(insulter)
 
     case InsultMessage(i) =>
@@ -24,8 +24,11 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
       self ! InsultMessage(i)
 
     case ComebackMessage(c) =>
+      log.info(Console.GREEN + s"Got comeback message from ${sender.path.name}" + Console.RESET)
       become(insulter)
       self ! ComebackMessage(c)
+
+    case Info(m) => log.info(Console.YELLOW + m + Console.RESET)
 
   }
 
@@ -45,16 +48,20 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
           become(awaitingStatus)
       }
 
+    case YourTurn => printComebacks()
+
+    case Info(m) => log.info(Console.YELLOW + m + Console.RESET)
+
   }
 
   def insulter: Receive = {
     case Select(x) =>
-      insults find {i => i.id == x } match {
+      insults find { i => i.id == x } match {
         case Some(insult) =>
           sender ! InsultMessage(insult)
           become(awaitingStatus)
 
-        case None => sender ! Info("You do not know this insult")
+        case None => self ! Info("You do not know this insult")
       }
 
     case InsultMessage(x) => sender ! Info("It's my turn to insult not yours")
@@ -62,16 +69,31 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
     case ComebackMessage(x) =>
       sender ! ConcedeRound
       become(awaitingStatus)
+
+    case YourTurn => printInsults()
+
+    case Info(m) => log.info(Console.YELLOW + m + Console.RESET)
   }
+
+
+  def printComebacks() = {
+    comebacks foreach { c => println(s"[${Console.GREEN + c.id + Console.RESET}] ${c.content}") }
+  }
+
+  def printInsults() = {
+    insults foreach { i => println(s"[${Console.GREEN + i.id + Console.RESET}] ${i.content}") }
+  }
+
 
   override def receive = {
     case Registered =>
-      log.info(s"Registered to play send ready to engage message to ${sender.path.name}")
       sender ! ReadyToEngage
       become(awaitingStatus)
 
     case YourTurn =>
       log.info("I still don't have a state but that will change pretty soon")
       become(insulter)
+
+    case Info(m) => log.info(Console.YELLOW + m + Console.RESET)
   }
 }
