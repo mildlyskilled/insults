@@ -24,11 +24,16 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
       self ! InsultMessage(i)
 
     case ComebackMessage(c) =>
-      log.info(Console.GREEN + s"Got comeback message from ${sender.path.name}" + Console.RESET)
       become(insulter)
       self ! ComebackMessage(c)
 
+    case GetInsults => printInsults()
+
+    case GetComebacks => printComebacks()
+
     case Info(m) => log.info(Console.YELLOW + m + Console.RESET)
+
+    case GetState => self ! Info("Awaiting Status")
 
   }
 
@@ -52,6 +57,8 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
 
     case Info(m) => log.info(Console.YELLOW + m + Console.RESET)
 
+    case GetState => self ! Info("I'm Insulted")
+
   }
 
   def insulter: Receive = {
@@ -66,9 +73,9 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
 
     case InsultMessage(x) => sender ! Info("It's my turn to insult not yours")
 
-    case ComebackMessage(x) =>
-      sender ! ConcedeRound
-      become(awaitingStatus)
+    case GetState => self ! Info("About to get a little uncivilised")
+
+    case ComebackMessage(x) => handleComeback(x)
 
     case YourTurn => printInsults()
 
@@ -77,13 +84,20 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
 
 
   def printComebacks() = {
+    println(Console.GREEN + "My Comebacks " + Console.RESET)
     comebacks foreach { c => println(s"[${Console.GREEN + c.id + Console.RESET}] ${c.content}") }
   }
 
   def printInsults() = {
+    println(Console.GREEN + "My Insults " + Console.RESET)
     insults foreach { i => println(s"[${Console.GREEN + i.id + Console.RESET}] ${i.content}") }
   }
 
+  def handleComeback(c: Comeback) = {
+    log.info(Console.GREEN + s"Got comeback message from ${sender.path.name}" + Console.RESET)
+    become(insulter)
+    learnedComebacks += c
+  }
 
   override def receive = {
     case Registered =>
@@ -95,5 +109,7 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
       become(insulter)
 
     case Info(m) => log.info(Console.YELLOW + m + Console.RESET)
+
+    case GetState => self ! Info("No State")
   }
 }

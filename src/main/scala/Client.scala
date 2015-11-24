@@ -64,6 +64,13 @@ object Client extends App {
 
     case "scores" => gameEngine.tell(PrintScores, playerActor)
 
+    case "inventory" => {
+      playerActor ! GetInsults
+      playerActor ! GetComebacks
+    }
+
+    case "state" => playerActor ! GetState
+
     case numberSelectorPattern(x) => playerActor.tell(Select(x.toInt), gameEngine)
 
 

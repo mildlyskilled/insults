@@ -25,9 +25,7 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
 
     case Register => handleRegister()
 
-    case Unregister =>
-      sender() ! Leave
-      become(waiting)
+    case Unregister => handleUnregister()
 
     case ListPlayers => handleListPlayers()
 
@@ -49,7 +47,10 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
   def handleComebackMessage(comeback: Comeback): Unit = {
     log.info(s"Got comeback from ${sender.path.name}")
     getArenaByPlayer(sender()) match {
-      case Some(arena) => arena.getPlayers.filterNot(_ == sender()).foreach(_ ! ComebackMessage(comeback))
+      case Some(arena) => arena.getPlayers.filterNot(_ == sender()).foreach{
+        opponent => opponent ! ComebackMessage(comeback)
+          arena.incrementScore(sender())
+      }
       case None => sender() ! Info("You don't seem to be registered in an arena")
     }
   }
@@ -64,8 +65,12 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
 
   def handleUnregister() = {
     log.info(s"${sender.path.name} is leaving the game")
-    registry = registry.filter(a => a.name == sender.path.name)
-    sender() ! Leave
+    registry.find(arena => arena.name == sender.path.name) match {
+      case Some(a) => a.getPlayers.foreach(_ ! Leave)
+      case None => sender() ! Leave
+    }
+    registry = registry.filterNot(a => a.name == sender.path.name)
+
   }
 
   def handleListPlayers() = {
@@ -78,7 +83,7 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
 
   def handleInsultMessage(insult: Insult) = {
       getArenaByPlayer(sender()) match  {
-        case Some(arena) => arena.getPlayers.filterNot(p => p == sender()).foreach(_.tell(InsultMessage(insult), self))
+        case Some(arena) => arena.getPlayers.filterNot(p => p == sender()).foreach(_ ! InsultMessage(insult))
         case None => Info("You are not in an arena")
       }
   }
@@ -133,7 +138,7 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
 
   def spawnPirate(name: String) = {
     context.system.actorOf(
-      Props(classOf[Pirate], repo.getRandomInsults(2), repo.getRandomComebacks(2)),
+      Props(classOf[Pirate], repo.getRandomInsults(10), repo.getRandomComebacks(10)),
       name = name)
   }
 

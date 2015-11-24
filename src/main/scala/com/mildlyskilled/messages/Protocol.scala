@@ -48,4 +48,6 @@ object Protocol {
   case object AnotherGame extends Message
 
   case object Leave extends Message
+
+  case object GetState extends Message
 }
