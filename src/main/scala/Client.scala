@@ -23,7 +23,7 @@ object Client extends App {
   val user = new ConsoleReader().readLine("identify yourself: ")
 
   val playerActor = system.actorOf(
-    Props(classOf[Player], repo.getRandomInsults(2), repo.getRandomComebacks(2)),
+    Props(classOf[Player], repo.getRandomInsults(3), repo.getRandomComebacks(3)),
     name = user)
 
   var started = false
@@ -68,6 +68,8 @@ object Client extends App {
       playerActor ! GetInsults
       playerActor ! GetComebacks
     }
+
+    case "stats" => gameEngine.tell(PrintStats, playerActor)
 
     case "state" => playerActor ! GetState
 

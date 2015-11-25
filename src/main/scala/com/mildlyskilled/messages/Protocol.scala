@@ -50,4 +50,6 @@ object Protocol {
   case object Leave extends Message
 
   case object GetState extends Message
+
+  case object PrintStats extends Message
 }

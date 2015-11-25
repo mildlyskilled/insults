@@ -11,8 +11,8 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
 
   var learnedComebacks = mutable.Set.empty[Comeback]
   var learnedInsults = mutable.Set.empty[Insult]
-  override implicit val insults = knownInsults ::: learnedInsults.toList
-  override implicit val comebacks = knownComebacks ::: learnedComebacks.toList
+  override implicit def insults = knownInsults ::: learnedInsults.toList
+  override implicit def comebacks = knownComebacks ::: learnedComebacks.toList
 
   def awaitingStatus: Receive = {
     case YourTurn =>
@@ -42,7 +42,6 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
         case None =>
           sender ! ConcedeRound
           learnedInsults += i
-          become(awaitingStatus)
       }
 
     case YourTurn => printComebacks()
@@ -53,7 +52,7 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
 
     case GetComebacks => printComebacks()
 
-    case GetState => self ! Info("I'm Insulted")
+    case GetState => self ! Info("I feel sullied")
 
   }
 
@@ -62,7 +61,6 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
       insults find { i => i.id == x } match {
         case Some(insult) =>
           sender ! InsultMessage(insult)
-          become(awaitingStatus)
 
         case None => self ! Info("You do not know this insult")
       }
@@ -97,7 +95,7 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
     log.info(Console.GREEN + s"Got comeback message from ${sender.path.name}" + Console.RESET)
     become(insulter)
     learnedComebacks += c
-    println(learnedComebacks)
+    sender ! ConcedeRound
   }
 
   override def receive = {

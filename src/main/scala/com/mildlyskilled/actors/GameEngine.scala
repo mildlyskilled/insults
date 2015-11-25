@@ -38,7 +38,17 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
       case None => log.info(Console.RED + " This player doesn't belong to an arena " + Console.RESET)
     }
 
+    case PrintStats => getArenaByPlayer(sender()) match {
+      case Some(arena) => arena.gameStats.foreach {
+        case ("losses", score) => println(Console.RED + s"Losses: ${score.toString}" + Console.RESET)
+        case ("wins", score) => println(Console.GREEN + s"Wins: ${score.toString}" + Console.RESET)
+      }
+      case None => sender ! Info("You don't belong to an arena")
+    }
+
     case ConcedeRound => handleConcedeRound()
+
+    case Info(m) => println(Console.YELLOW + m + Console.RESET)
 
     case ReadyToEngage => handleReadyToEngage()
 
@@ -47,9 +57,9 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
   def handleComebackMessage(comeback: Comeback): Unit = {
     log.info(s"Got comeback from ${sender.path.name}")
     getArenaByPlayer(sender()) match {
-      case Some(arena) => arena.getPlayers.filterNot(_ == sender()).foreach{
-        opponent => opponent ! ComebackMessage(comeback)
-          arena.incrementScore(sender())
+      case Some(arena) => arena.getPlayers.filterNot(_ == sender()).foreach {
+        opponent =>
+          opponent ! ComebackMessage(comeback)
       }
       case None => sender() ! Info("You don't seem to be registered in an arena")
     }
@@ -82,10 +92,10 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
   }
 
   def handleInsultMessage(insult: Insult) = {
-      getArenaByPlayer(sender()) match  {
-        case Some(arena) => arena.getPlayers.filterNot(p => p == sender()).foreach(_ ! InsultMessage(insult))
-        case None => Info("You are not in an arena")
-      }
+    getArenaByPlayer(sender()) match {
+      case Some(arena) => arena.getPlayers.filterNot(p => p == sender()).foreach(_ ! InsultMessage(insult))
+      case None => Info("You are not in an arena")
+    }
   }
 
   def handleConcedeRound() = {
@@ -97,12 +107,16 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
           opponent ! Info("You win this round")
           opponent ! YourTurn
           if (arena.getPlayerScore(opponent) == arena.scoreLimit) {
-            // if the arena belongs to the sender reset the sender score and remove pirate for another duel
+            opponent ! Info("You are victorious")
             if (opponent.path.name == arena.name) {
-              opponent ! Info("You are victorious")
-              sender() ! Leave
               arena.resetScore(opponent)
+              arena.addToWins()
+              sender ! Leave
               arena.removePlayer(sender())
+            } else {
+              arena.addToLosses()
+              opponent ! Leave
+              arena.removePlayer(opponent)
             }
           }
 
@@ -119,7 +133,7 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
 
       case Some(arena) => {
         getArenaByName("pirate") match {
-          case Some(pirateArena) => sender() ! Info("You're already engaged in battle")
+          case Some(_) => sender() ! Info("You're already engaged in battle")
           case None => arena.addPlayer(spawnPirate("pirate"))
         }
       }
@@ -138,7 +152,7 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
 
   def spawnPirate(name: String) = {
     context.system.actorOf(
-      Props(classOf[Pirate], repo.getRandomInsults(10), repo.getRandomComebacks(10)),
+      Props(classOf[Pirate], repo.getRandomInsults(3), repo.getRandomComebacks(3)),
       name = name)
   }
 

@@ -9,8 +9,8 @@ trait Playable extends Actor with ActorLogging {
 
   val knownInsults: List[Insult]
   val knownComebacks: List[Comeback]
-  implicit val insults = knownInsults
-  implicit val comebacks = knownComebacks
+  implicit def insults = knownInsults
+  implicit def comebacks = knownComebacks
 
   def receive = {
     case Select(x) =>
@@ -37,9 +37,14 @@ trait Playable extends Actor with ActorLogging {
     case Registered => log.info("Registered to play")
 
     case Leave => {
-      sender() ! ConcedeGame
+      sender ! Info("My work here is done")
+      sender ! ConcedeGame
       context stop self
     }
+
+    case Info(m) => println(Console.YELLOW + m + Console.RESET)
+
+    case YourTurn => log.info(Console.YELLOW + "I will not stoop so low" + Console.RESET)
 
     case _ => log.info("I did not understand that message")
   }
