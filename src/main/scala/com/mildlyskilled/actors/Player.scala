@@ -19,14 +19,6 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
       printInsults()
       become(insulter)
 
-    case InsultMessage(i) =>
-      become(insulted)
-      self ! InsultMessage(i)
-
-    case ComebackMessage(c) =>
-      become(insulter)
-      self ! ComebackMessage(c)
-
     case GetInsults => printInsults()
 
     case GetComebacks => printComebacks()
@@ -57,6 +49,10 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
 
     case Info(m) => log.info(Console.YELLOW + m + Console.RESET)
 
+    case GetInsults => printInsults()
+
+    case GetComebacks => printComebacks()
+
     case GetState => self ! Info("I'm Insulted")
 
   }
@@ -79,24 +75,29 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
 
     case YourTurn => printInsults()
 
+    case GetInsults => printInsults()
+
+    case GetComebacks => printComebacks()
+
     case Info(m) => log.info(Console.YELLOW + m + Console.RESET)
   }
 
 
-  def printComebacks() = {
+  def printComebacks() (implicit cb: List[Comeback]) = {
     println(Console.GREEN + "My Comebacks " + Console.RESET)
-    comebacks foreach { c => println(s"[${Console.GREEN + c.id + Console.RESET}] ${c.content}") }
+    cb foreach { c => println(s"[${Console.GREEN + c.id + Console.RESET}] ${c.content}") }
   }
 
-  def printInsults() = {
+  def printInsults()(implicit ins: List[Insult]) = {
     println(Console.GREEN + "My Insults " + Console.RESET)
-    insults foreach { i => println(s"[${Console.GREEN + i.id + Console.RESET}] ${i.content}") }
+    ins foreach { i => println(s"[${Console.GREEN + i.id + Console.RESET}] ${i.content}") }
   }
 
   def handleComeback(c: Comeback) = {
     log.info(Console.GREEN + s"Got comeback message from ${sender.path.name}" + Console.RESET)
     become(insulter)
     learnedComebacks += c
+    println(learnedComebacks)
   }
 
   override def receive = {
