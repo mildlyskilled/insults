@@ -12,6 +12,7 @@ case class Arena(
   val playerLimit = 2
   val scoreLimit = 2
   val defaultScore = 0
+  var seenInsults = Seq.empty[Insult]
 
   def addPlayer(player: ActorRef) =
     if (!players.contains(player) && (players.size < playerLimit)) {
@@ -30,6 +31,8 @@ case class Arena(
   def addToWins() = gameStats("wins") += 1
 
   def addToLosses() = gameStats("losses") += 1
+
+  def addToInsults(insult: Insult) = insult +: seenInsults
 
   def getPlayers = players.keys
 

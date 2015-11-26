@@ -93,7 +93,10 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
 
   def handleInsultMessage(insult: Insult) = {
     getArenaByPlayer(sender()) match {
-      case Some(arena) => arena.getPlayers.filterNot(p => p == sender()).foreach(_ ! InsultMessage(insult))
+      case Some(arena) => arena.seenInsults.find(_.id == insult.id) match {
+        case Some(ins) => sender ! Info("Can you please be more creative")
+        case None => arena.getPlayers.filterNot(p => p == sender()).foreach(_ ! InsultMessage(insult))
+      }
       case None => Info("You are not in an arena")
     }
   }
