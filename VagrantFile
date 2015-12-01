@@ -28,4 +28,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     player2.vm.network :private_network, ip: "192.168.33.12"
     player2.vm.synced_folder ".", "/srv/insults", :owner => 'vagrant', :group => 'vagrant'
   end
+  
+  config.vm.provider "virtualbox" do |v|
+    v.memory = 2048
+  end
 end

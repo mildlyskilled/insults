@@ -137,7 +137,9 @@ class GameEngine(val repo: Repo) extends Actor with ActorLogging {
       case Some(arena) => {
         getArenaByName("pirate") match {
           case Some(_) => sender() ! Info("You're already engaged in battle")
-          case None => arena.addPlayer(spawnPirate("pirate"))
+          case None => {
+            arena.addPlayer(spawnPirate(s"${arena.name}-pirate-${arena.gameStats("wins").toString}"))
+          }
         }
       }
 
