@@ -6,29 +6,26 @@ VAGRANTFILE_API_VERSION = "2"
 
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-  config.vm.provision "shell", inline: "echo Hello"
+  config.vm.provision :shell, path: "vagrant_bootstrap.sh"
 
   config.vm.define "engine", primary: true do |engine|
     engine.vm.box = "engine"
-    engine.vm.network "forwarded_port", guest: 1097, host: 8080
-    engine.vm.box = "hashicorp/trusty64"
-    engine.vm.network :private_network, ip: "192.168.1.40"
+    engine.vm.box = "ubuntu/trusty64"
+    engine.vm.network :private_network, ip: "192.168.33.10"
     engine.vm.synced_folder ".", "/srv/insults", :owner => 'vagrant', :group => 'vagrant'
   end
 
   config.vm.define "player1" do |player1|
     player1.vm.box = "player1"
-    player1.vm.network "forwarded_port", guest: 1098, host: 8080
-    player1.vm.box = "hashicorp/trusty64"
-    player1.vm.network :private_network, ip: "192.168.1.41"
+    player1.vm.box = "ubuntu/trusty64"
+    player1.vm.network :private_network, ip: "192.168.33.11"
     player1.vm.synced_folder ".", "/srv/insults", :owner => 'vagrant', :group => 'vagrant'
   end
 
   config.vm.define "player2" do |player2|
     player2.vm.box = "player2"
-    player2.vm.network "forwarded_port", guest: 1099, host: 8080
-    player2.vm.box = "hashicorp/trusty64"
-    player2.vm.network :private_network, ip: "192.168.1.42"
+    player2.vm.box = "ubuntu/trusty64"
+    player2.vm.network :private_network, ip: "192.168.33.12"
     player2.vm.synced_folder ".", "/srv/insults", :owner => 'vagrant', :group => 'vagrant'
   end
 end
