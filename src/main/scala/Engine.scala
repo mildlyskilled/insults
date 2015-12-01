@@ -2,6 +2,7 @@ import akka.actor.{Props, ActorSystem}
 import com.mildlyskilled.actors.GameEngine
 import com.mildlyskilled.messages.Protocol.Initialise
 import com.mildlyskilled.models.Repo
+import com.mildlyskilled.network.Selector
 import com.typesafe.config.ConfigFactory
 
 /**

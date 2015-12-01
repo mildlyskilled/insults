@@ -1,5 +1,6 @@
 import akka.actor.{ActorSystem, Props}
 import akka.util.Timeout
+import com.mildlyskilled.network.Selector
 import scala.concurrent.duration._
 import scala.concurrent.Await
 import scala.tools.jline.console.ConsoleReader
@@ -9,11 +10,14 @@ import com.mildlyskilled.messages.Protocol._
 import com.mildlyskilled.models.Repo
 import com.typesafe.config.ConfigFactory
 
-object Client extends App {
+object Client extends App with Selector {
 
   implicit val resolveTimeout = Timeout(5 seconds)
+
+  override def configKey = "player"
+
   val repo = new Repo
-  val system = ActorSystem("InsultSystem", ConfigFactory.load.getConfig("player"))
+  val system = ActorSystem("InsultSystem", completeConfig)
   val serverConfig = ConfigFactory.load.getConfig("engine")
   val serverHostName = serverConfig.getString("akka.remote.netty.tcp.hostname")
   val serverPort = serverConfig.getString("akka.remote.netty.tcp.port")
