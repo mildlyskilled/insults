@@ -29,12 +29,12 @@ trait Playable extends Actor with ActorLogging {
 
     case GoAway => handleGoAway()
 
-    case Leave => context.system.shutdown()
+    case Leave => context.system.terminate()
 
     case Registered => handleRegisteredMessage()
   }
 
-  def handleInsult(i: Insult)(implicit comebacks: List[Comeback]) = {
+  def handleInsult(i: Insult)(implicit comebacks: List[Comeback]): Unit = {
     log.info(Console.GREEN + s"${i.content}" + Console.RESET)
     comebacks find (_.id == i.id) match {
       case None => sender() ! ConcedeRound
@@ -42,37 +42,37 @@ trait Playable extends Actor with ActorLogging {
     }
   }
 
-  def handleReturnInsults()(implicit insults: List[Insult]) = {
+  def handleReturnInsults()(implicit insults: List[Insult]): Unit = {
     sender() ! insults
   }
 
-  def handleSelectInsult(id: Int)(implicit insults: List[Insult]) = {
+  def handleSelectInsult(id: Int)(implicit insults: List[Insult]): Unit = {
     insults find { i => i.id == id } match {
       case None => log.info(Console.RED + "You don't know this insult" + Console.RESET)
       case Some(i) => sender() ! InsultMessage(i)
     }
   }
 
-  def handleReturnComebacks()(implicit comebacks: List[Comeback]) = {
+  def handleReturnComebacks()(implicit comebacks: List[Comeback]): Unit = {
     sender() ! KnownComebacks(comebacks)
   }
 
-  def handleGoAway() = {
+  def handleGoAway(): Unit = {
     log.info(Console.RED + s"${self.path.name} leaving now" + Console.RESET)
     context stop self
   }
 
-  def handleConcedeGame() = {
+  def handleConcedeGame(): Unit = {
     log.info(Console.RED + s"I have lost ${self.path.name} concedes" + Console.RESET)
     context stop self
   }
 
-  def handleComeback(c: Comeback) = {
+  def handleComeback(c: Comeback): Unit = {
     log.info(Console.GREEN + s"${c.content}" + Console.RESET)
     sender() ! ConcedeRound
   }
 
-  def handleRegisteredMessage() = {
+  def handleRegisteredMessage(): Unit = {
     sender() ! ReadyToEngage
   }
 

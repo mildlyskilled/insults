@@ -17,11 +17,11 @@ case class Player(override val knownInsults: List[Insult], override val knownCom
     sender() ! ConcedeRound
   }
 
-  override def handleReturnInsults() = {
-    sender() ! KnownInsults(knownInsults ::: learnedInsults.toList)
+  override def handleReturnInsults()(implicit insults: List[Insult]): Unit = {
+    sender() ! KnownInsults(insults)
   }
 
-  override def handleReturnComebacks() = {
+  override def handleReturnComebacks()(implicit comebacks: List[Comeback]) = {
     sender() ! KnownComebacks(knownComebacks ::: learnedComebacks.toList)
   }
 

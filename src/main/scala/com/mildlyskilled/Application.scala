@@ -46,7 +46,7 @@ object Application extends App {
 
 
   Iterator.continually(new ConsoleReader().readLine("> ")).takeWhile(_ != "exit").foreach {
-    case "start" => {
+    case "start" ⇒
       if (!started) {
         gameEngine ! Initialise
         gameEngine ! Register(playerActor)
@@ -55,42 +55,36 @@ object Application extends App {
       } else {
         println("Game already started please use restart instead")
       }
-    }
 
-    case "another" => {
+    case "another" ⇒
       pirateActor = spawnPirate
       gameEngine ! Register(pirateActor)
       gameEngine ! ResetPlayerScore(playerActor)
-    }
 
-    case "player" => {
+    case "player" ⇒
       playerActor.tell(GetInsults, gameEngine)
       playerActor.tell(GetComebacks, gameEngine)
-    }
 
-    case "players" => gameEngine ! ListPlayers
 
-    case "stop" => {
-      gameEngine ! Unregister(pirateActor)
-    }
+    case "players" ⇒ gameEngine ! ListPlayers
 
-    case "pirate" => {
+    case "stop" ⇒ gameEngine ! Unregister(pirateActor)
+
+
+    case "pirate" ⇒
       pirateActor.tell(GetInsults, gameEngine)
       pirateActor.tell(GetComebacks, gameEngine)
-    }
 
-    case "scores" => gameEngine ! GetScores
+    case "scores" ⇒ gameEngine ! GetScores
 
-    case insultRegex(id) => {
-      playerActor.tell(SelectInsult(id.toInt), gameEngine)
-    }
+    case insultRegex(id) ⇒ playerActor.tell(SelectInsult(id.toInt), gameEngine)
 
-    case "turn" => gameEngine ! Turn
+    case "turn" ⇒ gameEngine ! YourTurn
 
-    case "help" => printHelp()
+    case "help" ⇒ printHelp()
 
-    case _ => println("I did not understand that message")
+    case _ ⇒ println("I did not understand that message")
   }
   println("Exiting game...")
-  system.shutdown()
+  system.terminate()
 }
